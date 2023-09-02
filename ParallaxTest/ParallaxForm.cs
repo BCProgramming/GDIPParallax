@@ -20,8 +20,12 @@ namespace ParallaxTest
         private Image Crystal1 = null;
         private Image Crystal2 = null;
         private Image Crystal3 = null;
+        private Image Road = null;
         private TextureBrush[] Layers = null;
-        
+
+
+        private TextureBrush[] ForegroundLayers = null;
+
         private void LoadImages()
         {
             String sDir = Path.GetDirectoryName(Assembly.GetExecutingAssembly().Location);
@@ -29,10 +33,12 @@ namespace ParallaxTest
             String crystal1Path = Path.Combine(sDir, "crystal1.png");
             String crystal2Path = Path.Combine(sDir, "crystal2.png");
             String crystal3Path = Path.Combine(sDir, "crystal3.png");
+            String roadPath = Path.Combine(sDir, "road.png");
             body = Image.FromFile(bodyPath);
             Crystal1 = Image.FromFile(crystal1Path);
             Crystal2 = Image.FromFile(crystal2Path);
             Crystal3 = Image.FromFile(crystal3Path);
+            Road = Image.FromFile(roadPath);
         }
         private Image ResizeImage(Image Source, Size newSize)
         {
@@ -44,6 +50,8 @@ namespace ParallaxTest
 
             return result;
         }
+        const int NumRoadLayers = 20;
+        const float ScaleRatio = 0.2f;
         bool Prepared = false;
         private void PrepareTextures()
         {
@@ -56,15 +64,27 @@ namespace ParallaxTest
             TextureBrush Crystal6Texture = new TextureBrush(Crystal3);
             Layers = new TextureBrush[] { Crystal1Texture, Crystal2Texture, Crystal3Texture, Crystal4Texture, Crystal5Texture, Crystal6Texture };
 
+            ForegroundLayers = new TextureBrush[NumRoadLayers];
+            for (int i = 0; i < NumRoadLayers; i++)
+            {
+                //lowest value is smallest, we increase the scale for each.
+                TextureBrush LayerTexture = new TextureBrush(Road);
+                LayerTexture.ScaleTransform(ScaleRatio * i, ScaleRatio * i);
+                ForegroundLayers[i] = LayerTexture;
+
+            }
+            
+
+
             Prepared = true;
         }
-        private void SetTextureOrigins(int Value)
+        private void SetTextureOrigins(int Value,TextureBrush[] TheLayers,double offsetScale = 1,double XScale = 0,double YScale = 1)
         {
-            for(int i=0;i<Layers.Length;i++)
+            for(int i=0;i< TheLayers.Length;i++)
             {
-                Layers[i].ResetTransform();
-                float Offset = (Value + i) * (i);
-                Layers[i].TranslateTransform(0, Offset);
+                TheLayers[i].ResetTransform();
+                float Offset = (float)((Value + i) * ((float)i*offsetScale));
+                TheLayers[i].TranslateTransform((float)(Offset*XScale), (float)(Offset*YScale));
             }
         }
         public ParallaxForm()
@@ -84,11 +104,27 @@ namespace ParallaxTest
             }
             e.Graphics.DrawImage(body, ClientRectangle);
             //set origins
-            SetTextureOrigins(CurrentPaintCount);
+            SetTextureOrigins(CurrentPaintCount,Layers);
+            SetTextureOrigins(CurrentPaintCount, ForegroundLayers,-0.4,1,0);
             for(int i=0;i<Layers.Length;i++)
             {
                 e.Graphics.FillRectangle(Layers[i], ClientRectangle);
             }
+
+            float StartYPosition = ClientSize.Height*(3f / 4f);
+            float CurrentYPosition = StartYPosition;
+            float PerLayer = (ClientSize.Height * .25f) / NumRoadLayers;
+
+            for (int i = 0; i < NumRoadLayers;i++)
+            {
+                e.Graphics.FillRectangle(ForegroundLayers[i], new RectangleF(0, CurrentYPosition, ClientSize.Width, PerLayer * 1.25f));
+                CurrentYPosition += PerLayer;
+            }
+
+
+
+
+
         }
         
         private void Form1_Load(object sender, EventArgs e)
